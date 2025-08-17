@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://cnw6n58jce2e8"]
+
+[ext_resource type="PackedScene" uid="uid://b7cmawwdq1pdd" path="res://scenes/smart_bunny.tscn" id="1_w2twt"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_w2twt"]
+distance = -21.0
+
+[node name="Main Scene" type="Node2D"]
+
+[node name="Smart Bunny" parent="." instance=ExtResource("1_w2twt")]
+position = Vector2(-2, -3)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(-1, -144)
+zoom = Vector2(1.4, 1.4)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+shape = SubResource("WorldBoundaryShape2D_w2twt")
