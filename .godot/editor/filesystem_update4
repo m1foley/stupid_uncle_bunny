@@ -1,0 +1,8 @@
+res://scenes/main_scene.tscn
+res://scenes/mario.tscn
+res://scenes/killzone.tscn
+res://scenes/goomba.tscn
+res://scripts/mario.gd
+res://scripts/goomba.gd
+res://scripts/killzone.gd
+res://notes/notes.txt

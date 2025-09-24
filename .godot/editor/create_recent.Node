@@ -1,0 +1,11 @@
+CollisionShape2D
+Area2D
+AudioStreamPlayer
+AnimatedSprite2D
+CharacterBody2D
+Timer
+TileMapLayer
+AudioStreamPlayer2D
+TileMap
+StaticBody2D
+Camera2D
