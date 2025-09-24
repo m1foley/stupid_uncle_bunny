@@ -1,0 +1,72 @@
+[gd_scene load_steps=9 format=3 uid="uid://br4ykxc6nbvn"]
+
+[ext_resource type="Script" uid="uid://bpvcykc63bndc" path="res://scripts/goomba.gd" id="1_fgpj4"]
+[ext_resource type="Texture2D" uid="uid://0qs127nhx60s" path="res://assets/sprites/goomba-animated-0.png" id="1_s1jgw"]
+[ext_resource type="Texture2D" uid="uid://bkso3x1cgyvry" path="res://assets/sprites/goomba-animated-1.png" id="2_fgpj4"]
+[ext_resource type="Texture2D" uid="uid://ug6osdrd46q6" path="res://assets/sprites/goomba-squished.png" id="2_l0j8n"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_l0j8n"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_l0j8n")
+}],
+"loop": true,
+"name": &"squished",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_s1jgw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_fgpj4")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 5.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_l0j8n"]
+size = Vector2(24, 30)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fgpj4"]
+size = Vector2(28, 8)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5lml2"]
+size = Vector2(32, 23)
+
+[node name="Goomba" type="CharacterBody2D"]
+scale = Vector2(0.5, 0.5)
+script = ExtResource("1_fgpj4")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, 2.84217e-14)
+scale = Vector2(1.33333, 1.33333)
+sprite_frames = SubResource("SpriteFrames_l0j8n")
+animation = &"walk"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 1)
+shape = SubResource("RectangleShape2D_l0j8n")
+
+[node name="HeadArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 4
+
+[node name="CollisionShape2DHead" type="CollisionShape2D" parent="HeadArea"]
+z_index = 1
+position = Vector2(0, -12)
+shape = SubResource("RectangleShape2D_fgpj4")
+
+[node name="BodyArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 6
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BodyArea"]
+z_index = 1
+position = Vector2(0, 4.5)
+shape = SubResource("RectangleShape2D_5lml2")
+
+[connection signal="body_entered" from="HeadArea" to="." method="_on_head_area_body_entered"]
+[connection signal="body_entered" from="BodyArea" to="." method="_on_body_area_body_entered"]

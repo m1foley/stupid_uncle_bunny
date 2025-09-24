@@ -1,0 +1,4 @@
+Layers/masks:
+1: world/walls
+2: hazards (lava, killzone)
+3: player

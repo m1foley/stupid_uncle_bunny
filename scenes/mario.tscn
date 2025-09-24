@@ -1,0 +1,50 @@
+[gd_scene load_steps=7 format=3 uid="uid://b7cmawwdq1pdd"]
+
+[ext_resource type="Script" uid="uid://c4ujpjv7c1kiw" path="res://scripts/mario.gd" id="1_bvgp0"]
+[ext_resource type="Texture2D" uid="uid://nsb2hb652ln4" path="res://assets/sprites/mario-sprites.png" id="2_5gbmu"]
+[ext_resource type="AudioStream" uid="uid://cy5krstfnfx8y" path="res://assets/sounds/mariodeath.mp3" id="3_5gbmu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_inle7"]
+atlas = ExtResource("2_5gbmu")
+region = Rect2(1, 15, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_dd465"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_inle7")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 0.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cr8at"]
+size = Vector2(37.3514, 34.9281)
+
+[node name="Mario" type="CharacterBody2D" groups=["player"]]
+position = Vector2(-17, -57)
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_bvgp0")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, 1.66893e-06)
+scale = Vector2(4.03125, 3.28125)
+sprite_frames = SubResource("SpriteFrames_dd465")
+animation = &"idle"
+autoplay = "idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(-3, 2.50001)
+scale = Vector2(1.07091, 1.34562)
+shape = SubResource("RectangleShape2D_cr8at")
+
+[node name="DeathTimer" type="Timer" parent="."]
+wait_time = 2.5
+one_shot = true
+
+[node name="DeathAudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_5gbmu")
+
+[connection signal="timeout" from="DeathTimer" to="." method="_on_death_timer_timeout"]
