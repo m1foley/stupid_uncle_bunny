@@ -1,4 +1,5 @@
 Layers/masks:
 1: world/walls
-2: hazards (lava, killzone)
+2: hazards, water (lava, killzone, water)
 3: player
+4: items (star)

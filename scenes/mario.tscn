@@ -1,15 +1,50 @@
-[gd_scene load_steps=7 format=3 uid="uid://b7cmawwdq1pdd"]
+[gd_scene load_steps=17 format=3 uid="uid://b7cmawwdq1pdd"]
 
 [ext_resource type="Script" uid="uid://c4ujpjv7c1kiw" path="res://scripts/mario.gd" id="1_bvgp0"]
 [ext_resource type="Texture2D" uid="uid://nsb2hb652ln4" path="res://assets/sprites/mario-sprites.png" id="2_5gbmu"]
 [ext_resource type="AudioStream" uid="uid://cy5krstfnfx8y" path="res://assets/sounds/mariodeath.mp3" id="3_5gbmu"]
+[ext_resource type="Texture2D" uid="uid://bluinu44y35n7" path="res://assets/sprites/mario-jumping.png" id="3_cjj4f"]
+[ext_resource type="Texture2D" uid="uid://h7ougfys3igl" path="res://assets/sprites/mario-running.png" id="3_rgcl4"]
+[ext_resource type="AudioStream" uid="uid://djbsj7u6gcwpy" path="res://assets/sounds/star.mp3" id="4_wnd63"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_t0xp7"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(0, 0, 16, 16)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_inle7"]
 atlas = ExtResource("2_5gbmu")
 region = Rect2(1, 15, 16, 16)
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_cjj4f"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8ska5"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(17, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5l4gq"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(34, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q20sn"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(17, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l5geh"]
+atlas = ExtResource("3_rgcl4")
+region = Rect2(34, 0, 16, 16)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_dd465"]
 animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_t0xp7")
+}],
+"loop": true,
+"name": &"bouncing",
+"speed": 5.0
+}, {
 "frames": [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_inle7")
@@ -17,34 +52,99 @@ animations = [{
 "loop": true,
 "name": &"idle",
 "speed": 0.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_cjj4f")
+}],
+"loop": true,
+"name": &"jumping",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cjj4f")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8ska5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5l4gq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8ska5")
+}],
+"loop": true,
+"name": &"running",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_t0xp7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q20sn")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q20sn")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l5geh")
+}],
+"loop": true,
+"name": &"swimming",
+"speed": 5.0
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_cr8at"]
-size = Vector2(37.3514, 34.9281)
+size = Vector2(9.33785, 10.4041)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5gbmu"]
+size = Vector2(10, 14)
 
 [node name="Mario" type="CharacterBody2D" groups=["player"]]
-position = Vector2(-17, -57)
 collision_layer = 4
-collision_mask = 3
 script = ExtResource("1_bvgp0")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-position = Vector2(0, 1.66893e-06)
-scale = Vector2(4.03125, 3.28125)
 sprite_frames = SubResource("SpriteFrames_dd465")
-animation = &"idle"
+animation = &"bouncing"
 autoplay = "idle"
+frame_progress = 0.551427
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(-3, 2.50001)
+position = Vector2(-1, 1)
 scale = Vector2(1.07091, 1.34562)
 shape = SubResource("RectangleShape2D_cr8at")
 
 [node name="DeathTimer" type="Timer" parent="."]
-wait_time = 2.5
+wait_time = 3.0
 one_shot = true
 
 [node name="DeathAudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_5gbmu")
 
+[node name="MiscCollisionDetector" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MiscCollisionDetector"]
+position = Vector2(-1, 1)
+shape = SubResource("RectangleShape2D_5gbmu")
+
+[node name="InvincibilityTimer" type="Timer" parent="."]
+wait_time = 9.0
+one_shot = true
+
+[node name="InvincibilityEndingTimer" type="Timer" parent="."]
+one_shot = true
+
+[node name="InvincibilityAudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_wnd63")
+bus = &"Music"
+
 [connection signal="timeout" from="DeathTimer" to="." method="_on_death_timer_timeout"]
+[connection signal="body_entered" from="MiscCollisionDetector" to="." method="_on_misc_collision_detector_body_entered"]
+[connection signal="body_exited" from="MiscCollisionDetector" to="." method="_on_misc_collision_detector_body_exited"]
+[connection signal="timeout" from="InvincibilityTimer" to="." method="_on_invincibility_timer_timeout"]
+[connection signal="timeout" from="InvincibilityEndingTimer" to="." method="_on_invincibility_ending_timer_timeout"]

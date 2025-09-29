@@ -38,6 +38,7 @@ size = Vector2(32, 23)
 
 [node name="Goomba" type="CharacterBody2D"]
 scale = Vector2(0.5, 0.5)
+floor_stop_on_slope = false
 script = ExtResource("1_fgpj4")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
@@ -70,3 +71,4 @@ shape = SubResource("RectangleShape2D_5lml2")
 
 [connection signal="body_entered" from="HeadArea" to="." method="_on_head_area_body_entered"]
 [connection signal="body_entered" from="BodyArea" to="." method="_on_body_area_body_entered"]
+[connection signal="body_exited" from="BodyArea" to="." method="_on_body_area_body_exited"]
