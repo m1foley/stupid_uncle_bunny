@@ -11,19 +11,27 @@ extends CharacterBody2D
 
 const SPEED = 300.0
 const JUMP_VELOCITY = -500.0
-const BOUNCE_VELOCITY = -300.0 
+const BOUNCE_VELOCITY_ENEMY = -300.0
+const BOUNCE_VELOCITY_SPRINGBOARD = -2200.0 
 const MAX_JUMPS = 2
 const DEATH_ROTATION_RADIANS = 0.05
 const DEATH_SCALE_RATE = 0.99
 
 var health: int = 1
-var should_bounce: bool = false
+var should_bounce_velocity: float = 0
 var jumps: int = 0
 var invincible: bool = false
 var invincible_ending: bool = false
 var invincibility_tween: Tween
 var in_water: bool = false
 var jumping: bool = false
+
+func _ready() -> void:
+	set_physics_process(false)
+	global_position = Vector2(42040, 10000)
+	# Re-enable after a frame
+	await get_tree().process_frame
+	set_physics_process(true)
 
 func _physics_process(delta: float) -> void:
 	if is_on_floor():
@@ -37,12 +45,12 @@ func _physics_process(delta: float) -> void:
 	if health <= 0:
 		_death_animation()
 	else:
-		# Handle bouncing off enemy if requested
-		if should_bounce:
+		# Bouncing off enemy/springboard
+		if should_bounce_velocity < 0:
 			jumps = 0
-			velocity.y = BOUNCE_VELOCITY
+			velocity.y = should_bounce_velocity
 			jumping = false
-			should_bounce = false
+			should_bounce_velocity = 0
 			
 		# Jump
 		if Input.is_action_just_pressed("ui_accept"):
@@ -111,8 +119,11 @@ func die() -> void:
 func _on_death_timer_timeout() -> void:
 	get_tree().reload_current_scene()
 
+func bounce_off_springboard():
+	should_bounce_velocity = BOUNCE_VELOCITY_SPRINGBOARD
+	
 func bounce_off_enemy():
-	should_bounce = true
+	should_bounce_velocity = BOUNCE_VELOCITY_ENEMY
 
 # Water/hazard collision
 func _on_misc_collision_detector_body_entered(body: Node2D) -> void:

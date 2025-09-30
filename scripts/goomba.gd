@@ -3,13 +3,15 @@ extends CharacterBody2D
 @onready var animated_sprite = $AnimatedSprite2D
 @onready var squish_audio_player = $"../../SquishAudioStreamPlayer"
 @onready var jump_timer: Timer
+@onready var spawn_timer: Timer
 @onready var refractory_timer: Timer
 @onready var collision_shape = $CollisionShape2D
 @onready var head_area = $HeadArea
 @onready var body_area = $BodyArea
 @onready var player = $"../../Mario"
+@onready var springboard = $"../../Items/SpringboardBossGoomba"
 
-const SPEED = 50.0
+const WALKING_SPEED = 50.0
 const ACTIVATION_RANGE = 500.0
 const BOSS_ACTIVATION_RANGE = 1000.0
 const SQUISHED_SECS = 0.4
@@ -20,10 +22,15 @@ const INVINCIBILITY_KNOCKBACK_ROTATION_RANGE = Vector2(-1.1, 1.1)
 const BOSS_JUMP_SPEED = -1000.0
 const BOSS_JUMP_INTERVAL = 10.0
 const BOSS_REFRACTORY_DURATION = 3
-const BOSS_HEALTH = 6
+const BOSS_HEALTH = 3#7
 const BOSS_DEATH_ROTATION_RADIANS = 0.05
 const BOSS_DEATH_SCALE_RATE = 0.99
 const BOSS_DEATH_SECS = 10
+const BOSS_SPAWN_INTERVAL = 7
+const BOSS_SPAWN_COUNT = 3
+const BOSS_SPAWN_VELOCITY_X_RANGE = Vector2(100, 800)
+const BOSS_SPAWN_VELOCITY_Y_RANGE = Vector2(-900, -1300)
+const GOOMBA_SCENE = preload("res://scenes/goomba.tscn")
 
 var direction: int = 1
 var health: int
@@ -31,49 +38,78 @@ var invincibility_knocked_back: bool = false
 var invincibility_knockback_rotation: float = 0.0
 var refractory_tween: Tween
 var active: bool = false
+var activation_range: float
+var initial_global_position: Vector2
+var jumping: bool = false
 
 func _ready():
 	if is_in_group("bossgoomba"):
+		initial_global_position = global_position
+		# Don't interact on layer 1 because we bump into the spawned goombas
 		set_collision_layer_value(1, false)
+		set_collision_mask_value(1, false)
 		health = BOSS_HEALTH
+		activation_range = BOSS_ACTIVATION_RANGE
 		jump_timer = Timer.new()
 		jump_timer.wait_time = BOSS_JUMP_INTERVAL
 		jump_timer.autostart = false # Don't start until activated
 		jump_timer.timeout.connect(_on_jump_timer_timeout)
 		add_child(jump_timer)
+		spawn_timer = Timer.new()
+		spawn_timer.wait_time = BOSS_SPAWN_INTERVAL
+		spawn_timer.autostart = false # Don't start until activated
+		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
+		add_child(spawn_timer)
 	else:
 		health = 1
+		activation_range = ACTIVATION_RANGE
 
 func _physics_process(delta: float) -> void:
 	# Wait until close to player
 	if !active && !_activate_if_close_to_player(): return
 
 	# Apply gravity
-	if !is_on_floor():
-		velocity += get_gravity() * delta
+	var apply_gravity
+	if is_in_group("bossgoomba"):
+		apply_gravity = jumping
+	else:
+		apply_gravity = !is_on_floor()
+	if apply_gravity: velocity += get_gravity() * delta
 		
 	if invincibility_knocked_back:
 		animated_sprite.rotate(invincibility_knockback_rotation)
 	elif health > 0:	
 		# Walk
-		if !is_in_group("bossgoomba"):
-			velocity.x = direction * SPEED
+		if !is_in_group("bossgoomba") && !_is_chucked_spawn():
+			velocity.x = direction * WALKING_SPEED
 	# If dead boss, continue death animation sequence
 	elif is_in_group("bossgoomba"):
 		_boss_death_animation()
 
 	move_and_slide()	
+	
+	# bossgoomba doesn't interact on layer 1, so we have to stop the jump ourselves
+	if is_in_group("bossgoomba") && jumping && global_position.y >= initial_global_position.y:
+		global_position.y = initial_global_position.y
+		velocity.y = 0
+		jumping = false
+
 	# Turn around when hit object
 	if is_on_wall():
 		direction *= -1
 
+func _is_chucked_spawn() -> bool:
+	return is_in_group("spawn") && velocity.x >= BOSS_SPAWN_VELOCITY_X_RANGE.x
+
 # Activate when player is close
 func _activate_if_close_to_player() -> bool:
 	if active: return true
-	if global_position.distance_to(player.global_position) <= ACTIVATION_RANGE:
-		active = true
+	active = is_in_group("spawn") || global_position.distance_to(player.global_position) <= activation_range
+	if active:
 		animated_sprite.play("walk")
-		if is_in_group("bossgoomba"): jump_timer.start()
+		if is_in_group("bossgoomba"):
+			jump_timer.start()
+			spawn_timer.start()
 	return active
 
 # Being squished
@@ -151,6 +187,8 @@ func _die(body: Node2D) -> void:
 		disappear_await_time = SQUISHED_SECS
  
 	await get_tree().create_timer(disappear_await_time).timeout
+	# springboard appears when bossgoomba dies
+	if is_in_group("bossgoomba"): springboard.enable()
 	queue_free()
 
 func _on_body_area_body_exited(body: Node2D) -> void:
@@ -158,8 +196,22 @@ func _on_body_area_body_exited(body: Node2D) -> void:
 		create_tween().tween_property(animated_sprite, "modulate:a", 1.0, 0.1)
 
 func _on_jump_timer_timeout() -> void:
-	if health > 0 && is_on_floor():
+	if health > 0:
 		velocity.y = BOSS_JUMP_SPEED
+		jumping = true
+
+func _on_spawn_timer_timeout() -> void:
+	for i in BOSS_SPAWN_COUNT:
+		await get_tree().create_timer(0.1).timeout
+		_spawn_goomba()
+
+func _spawn_goomba() -> void:
+	var spawn = GOOMBA_SCENE.instantiate()
+	spawn.add_to_group("spawn")
+	spawn.global_position = self.global_position
+	spawn.velocity.x = randf_range(BOSS_SPAWN_VELOCITY_X_RANGE.x, BOSS_SPAWN_VELOCITY_X_RANGE.y)
+	spawn.velocity.y = randf_range(BOSS_SPAWN_VELOCITY_Y_RANGE.x, BOSS_SPAWN_VELOCITY_Y_RANGE.y)
+	add_sibling(spawn)
 
 func _on_refractory_timer_timeout() -> void:
 	refractory_tween.kill()
@@ -174,4 +226,3 @@ func _boss_death_animation() -> void:
 	collision_shape.scale.x *= BOSS_DEATH_SCALE_RATE
 	animated_sprite.scale.y *= BOSS_DEATH_SCALE_RATE
 	collision_shape.scale.y *= BOSS_DEATH_SCALE_RATE
-  
