@@ -11,11 +11,13 @@ extends CharacterBody2D
 
 const SPEED = 300.0
 const JUMP_VELOCITY = -500.0
+const WATER_JUMP_VELOCITY = -400.0 
 const BOUNCE_VELOCITY_ENEMY = -300.0
 const BOUNCE_VELOCITY_SPRINGBOARD = -2200.0 
 const MAX_JUMPS = 2
 const DEATH_ROTATION_RADIANS = 0.05
 const DEATH_SCALE_RATE = 0.99
+const WATER_MAX_SPEED = 	50.0
 
 var health: int = 1
 var should_bounce_velocity: float = 0
@@ -26,12 +28,12 @@ var invincibility_tween: Tween
 var in_water: bool = false
 var jumping: bool = false
 
-func _ready() -> void:
-	set_physics_process(false)
-	global_position = Vector2(42040, 10000)
-	# Re-enable after a frame
-	await get_tree().process_frame
-	set_physics_process(true)
+#func _ready() -> void:
+	#set_physics_process(false)
+	#global_position = Vector2(42040, 10000)
+	## Re-enable after a frame
+	#await get_tree().process_frame
+	#set_physics_process(true)
 
 func _physics_process(delta: float) -> void:
 	if is_on_floor():
@@ -40,6 +42,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		# Apply gravity
 		velocity += get_gravity() * delta
+		# Cap vertical velocity in water
+		if in_water: velocity.y = min(velocity.y, WATER_MAX_SPEED)
 
 	# If dead, continue death animation sequence
 	if health <= 0:
@@ -58,7 +62,8 @@ func _physics_process(delta: float) -> void:
 			jumps += 1
 			if jumps <= MAX_JUMPS || in_water:
 				jump_audio.play()
-				velocity.y = JUMP_VELOCITY
+				var jump_velocity = WATER_JUMP_VELOCITY if in_water else JUMP_VELOCITY
+				velocity.y = jump_velocity
 			jumping = !in_water
 
 		# Left/Right optionally flips sprite (-1/0/1)
@@ -94,8 +99,8 @@ func _physics_process(delta: float) -> void:
 
 func _death_animation() -> void:
 	animated_sprite.rotate(DEATH_ROTATION_RADIANS)
-	animated_sprite.scale.x *= DEATH_SCALE_RATE
-	animated_sprite.scale.y *= DEATH_SCALE_RATE
+	scale.x *= DEATH_SCALE_RATE
+	scale.y *= DEATH_SCALE_RATE
 
 # RIP
 func die() -> void:

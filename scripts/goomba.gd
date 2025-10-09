@@ -9,7 +9,7 @@ extends CharacterBody2D
 @onready var head_area = $HeadArea
 @onready var body_area = $BodyArea
 @onready var player = $"../../Mario"
-@onready var springboard = $"../../Items/SpringboardBossGoomba"
+@onready var springboard_bossgoomba = $"../../Items/SpringboardBossGoomba"
 
 const WALKING_SPEED = 50.0
 const ACTIVATION_RANGE = 500.0
@@ -22,7 +22,7 @@ const INVINCIBILITY_KNOCKBACK_ROTATION_RANGE = Vector2(-1.1, 1.1)
 const BOSS_JUMP_SPEED = -1000.0
 const BOSS_JUMP_INTERVAL = 10.0
 const BOSS_REFRACTORY_DURATION = 3
-const BOSS_HEALTH = 3#7
+const BOSS_HEALTH = 7
 const BOSS_DEATH_ROTATION_RADIANS = 0.05
 const BOSS_DEATH_SCALE_RATE = 0.99
 const BOSS_DEATH_SECS = 10
@@ -31,6 +31,7 @@ const BOSS_SPAWN_COUNT = 3
 const BOSS_SPAWN_VELOCITY_X_RANGE = Vector2(100, 800)
 const BOSS_SPAWN_VELOCITY_Y_RANGE = Vector2(-900, -1300)
 const GOOMBA_SCENE = preload("res://scenes/goomba.tscn")
+const WATER_MAX_SPEED = 	30.0
 
 var direction: int = 1
 var health: int
@@ -41,6 +42,7 @@ var active: bool = false
 var activation_range: float
 var initial_global_position: Vector2
 var jumping: bool = false
+var in_water: bool = false
 
 func _ready():
 	if is_in_group("bossgoomba"):
@@ -71,17 +73,25 @@ func _physics_process(delta: float) -> void:
 	# Apply gravity
 	var apply_gravity
 	if is_in_group("bossgoomba"):
-		apply_gravity = jumping
+		apply_gravity = jumping || health <= 0
 	else:
 		apply_gravity = !is_on_floor()
-	if apply_gravity: velocity += get_gravity() * delta
+	if apply_gravity:
+		velocity += get_gravity() * delta
+		# Cap vertical velocity in water
+		if in_water: velocity.y = min(velocity.y, WATER_MAX_SPEED)
 		
 	if invincibility_knocked_back:
 		animated_sprite.rotate(invincibility_knockback_rotation)
 	elif health > 0:	
-		# Walk
-		if !is_in_group("bossgoomba") && !_is_chucked_spawn():
-			velocity.x = direction * WALKING_SPEED
+		if !is_in_group("bossgoomba"):
+			if _is_chucked_spawn():
+				# slow down spawned goombas when they hit the floor
+				if is_on_floor() && velocity.x > WALKING_SPEED:
+					velocity.x = WALKING_SPEED
+			else:
+				# Walk
+				velocity.x = direction * WALKING_SPEED
 	# If dead boss, continue death animation sequence
 	elif is_in_group("bossgoomba"):
 		_boss_death_animation()
@@ -116,6 +126,7 @@ func _activate_if_close_to_player() -> bool:
 func _on_head_area_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player") && health > 0 && body.health > 0:
 		if is_in_group("bossgoomba"):
+			# XXX
 			# Boss & player can't touch each other 
 			head_area.set_collision_mask_value(3, false)
 			body_area.set_collision_mask_value(3, false)
@@ -155,6 +166,7 @@ func _on_body_area_body_entered(body: Node2D) -> void:
 		_die(body)
 	# Entering water
 	elif body.is_in_group("water"):
+		in_water = true
 		create_tween().tween_property(animated_sprite, "modulate:a", 0.2, 0.1)
 
 func _die(body: Node2D) -> void:
@@ -175,7 +187,12 @@ func _die(body: Node2D) -> void:
 		velocity.x = randf_range(INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.y)
 		velocity.y = randf_range(INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.y)
 		invincibility_knockback_rotation = randf_range(INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.x, INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.y)
-	elif !is_in_group("bossgoomba"):
+	elif is_in_group("bossgoomba"):
+		jump_timer.stop()
+		spawn_timer.stop()
+		set_collision_layer_value(1, true)
+		set_collision_mask_value(1, true)
+	else:
 		animated_sprite.play("squished")
 
 	var disappear_await_time: float
@@ -188,17 +205,17 @@ func _die(body: Node2D) -> void:
  
 	await get_tree().create_timer(disappear_await_time).timeout
 	# springboard appears when bossgoomba dies
-	if is_in_group("bossgoomba"): springboard.enable()
+	if is_in_group("bossgoomba"): springboard_bossgoomba.enable()
 	queue_free()
 
 func _on_body_area_body_exited(body: Node2D) -> void:
 	if body.is_in_group("water"):
+		in_water = false
 		create_tween().tween_property(animated_sprite, "modulate:a", 1.0, 0.1)
 
 func _on_jump_timer_timeout() -> void:
-	if health > 0:
-		velocity.y = BOSS_JUMP_SPEED
-		jumping = true
+	velocity.y = BOSS_JUMP_SPEED
+	jumping = true
 
 func _on_spawn_timer_timeout() -> void:
 	for i in BOSS_SPAWN_COUNT:
@@ -222,7 +239,5 @@ func _on_refractory_timer_timeout() -> void:
 
 func _boss_death_animation() -> void:
 	animated_sprite.rotate(BOSS_DEATH_ROTATION_RADIANS)
-	animated_sprite.scale.x *= BOSS_DEATH_SCALE_RATE
-	collision_shape.scale.x *= BOSS_DEATH_SCALE_RATE
-	animated_sprite.scale.y *= BOSS_DEATH_SCALE_RATE
-	collision_shape.scale.y *= BOSS_DEATH_SCALE_RATE
+	scale.x *= BOSS_DEATH_SCALE_RATE
+	scale.y *= BOSS_DEATH_SCALE_RATE
