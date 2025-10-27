@@ -9,7 +9,9 @@ extends CharacterBody2D
 @onready var death_audio_player = $DeathAudioStreamPlayer
 @onready var invincibility_audio_player = $InvincibilityAudioStreamPlayer
 
-const SPEED = 300.0
+const MAX_SPEED = 300.0
+const ACCELERATION = 1000.0
+const FRICTION = 1000.0
 const JUMP_VELOCITY = -500.0
 const WATER_JUMP_VELOCITY = -400.0 
 const BOUNCE_VELOCITY_ENEMY = -300.0
@@ -91,9 +93,9 @@ func _physics_process(delta: float) -> void:
 			
 		# Move in the direction
 		if direction:
-			velocity.x = direction * SPEED
+			velocity.x = move_toward(velocity.x, direction * MAX_SPEED, ACCELERATION * delta)
 		else:
-			velocity.x = move_toward(velocity.x, 0, SPEED)
+			velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 
 	move_and_slide()
 
