@@ -59,7 +59,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"jumping",
-"speed": 5.0
+"speed": 1.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -93,7 +93,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"swimming",
-"speed": 5.0
+"speed": 60.0
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_cr8at"]
@@ -108,9 +108,9 @@ script = ExtResource("1_bvgp0")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_dd465")
-animation = &"bouncing"
+animation = &"swimming"
 autoplay = "idle"
-frame_progress = 0.551427
+frame_progress = 0.44117153
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(-1, 1)

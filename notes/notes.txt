@@ -3,3 +3,4 @@ Layers/masks:
 2: hazards, water (lava, killzone, water)
 3: player
 4: items (star)
+5: doors

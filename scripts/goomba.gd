@@ -15,10 +15,12 @@ const WALKING_SPEED = 50.0
 const ACTIVATION_RANGE = 500.0
 const BOSS_ACTIVATION_RANGE = 1000.0
 const SQUISHED_SECS = 0.4
+const HAZARD_DEATH_SECS = 1.0
 const INVINCIBILITY_KNOCKBACK_SECS = 1.0
 const INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE = Vector2(-250, 250)
 const INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE = Vector2(-500, -50)
 const INVINCIBILITY_KNOCKBACK_ROTATION_RANGE = Vector2(-1.1, 1.1)
+const WATER_ROTATION = 0.05
 const BOSS_JUMP_SPEED = -1000.0
 const BOSS_JUMP_INTERVAL = 10.0
 const BOSS_REFRACTORY_DURATION = 3
@@ -80,21 +82,30 @@ func _physics_process(delta: float) -> void:
 		velocity += get_gravity() * delta
 		# Cap vertical velocity in water
 		if in_water: velocity.y = min(velocity.y, WATER_MAX_SPEED)
-		
-	if invincibility_knocked_back:
-		animated_sprite.rotate(invincibility_knockback_rotation)
-	elif health > 0:	
-		if !is_in_group("bossgoomba"):
-			if _is_chucked_spawn():
-				# slow down spawned goombas when they hit the floor
-				if is_on_floor() && velocity.x > WALKING_SPEED:
-					velocity.x = WALKING_SPEED
-			else:
-				# Walk
-				velocity.x = direction * WALKING_SPEED
-	# If dead boss, continue death animation sequence
-	elif is_in_group("bossgoomba"):
-		_boss_death_animation()
+
+	if health <= 0:
+		# Continue boss death animation sequence
+		if is_in_group("bossgoomba"):
+			_boss_death_animation()
+		# Continue invincibility knockback animation sequence
+		elif invincibility_knocked_back:
+			animated_sprite.rotate(invincibility_knockback_rotation)
+	elif !is_in_group("bossgoomba"):
+		if _is_chucked_spawn():
+			# slow down spawned goombas when they hit the floor
+			if is_on_floor() && velocity.x > WALKING_SPEED:
+				velocity.x = WALKING_SPEED
+		else:
+			# Walk
+			velocity.x = direction * WALKING_SPEED
+
+	if in_water:
+		# Stop water spin
+		if is_on_floor():
+			animated_sprite.rotation_degrees = 0
+		# Spin when sinking in water
+		else:
+			animated_sprite.rotate(WATER_ROTATION)
 
 	move_and_slide()	
 	
@@ -124,33 +135,33 @@ func _activate_if_close_to_player() -> bool:
 
 # Being squished
 func _on_head_area_body_entered(body: Node2D) -> void:
-	if body.is_in_group("player") && health > 0 && body.health > 0:
-		if is_in_group("bossgoomba"):
-			# XXX
-			# Boss & player can't touch each other 
-			head_area.set_collision_mask_value(3, false)
-			body_area.set_collision_mask_value(3, false)
-			
-			if health > 1:
-				health -= 1
-				# Refactory visual effects
-				refractory_tween = create_tween()
-				refractory_tween.set_loops()
-				animated_sprite.modulate = Color.RED
-				refractory_tween.tween_property(animated_sprite, "modulate:a", 0.4, 0.1)
-				refractory_tween.tween_property(animated_sprite, "modulate:a", 1.0, 0.1)
-				# Refactory timer
-				refractory_timer = Timer.new()
-				refractory_timer.wait_time = BOSS_REFRACTORY_DURATION
-				refractory_timer.autostart = true
-				refractory_timer.timeout.connect(_on_refractory_timer_timeout)
-				add_child(refractory_timer)
-				# Bounce player
-				body.bounce_off_enemy()
-			else:
-				_die(body)
-		else:
+	if !body.is_in_group("player") || health <= 0 || body.health <= 0: return
+
+	if is_in_group("bossgoomba"):
+		# Boss & player can't touch each other 
+		head_area.set_collision_mask_value(3, false)
+		body_area.set_collision_mask_value(3, false)
+		
+		if health <= 1 || body.invincible:
 			_die(body)
+		else:
+			health -= 1
+			# Refactory visual effects
+			refractory_tween = create_tween()
+			refractory_tween.set_loops()
+			animated_sprite.modulate = Color.RED
+			refractory_tween.tween_property(animated_sprite, "modulate:a", 0.4, 0.1)
+			refractory_tween.tween_property(animated_sprite, "modulate:a", 1.0, 0.1)
+			# Refactory timer
+			refractory_timer = Timer.new()
+			refractory_timer.wait_time = BOSS_REFRACTORY_DURATION
+			refractory_timer.autostart = true
+			refractory_timer.timeout.connect(_on_refractory_timer_timeout)
+			add_child(refractory_timer)
+			# Bounce player
+			body.bounce_off_enemy()
+	else:
+		_die(body)
 
 # Body collisions
 func _on_body_area_body_entered(body: Node2D) -> void:
@@ -161,8 +172,10 @@ func _on_body_area_body_entered(body: Node2D) -> void:
 			_die(body)
 		elif body.health > 0:
 			body.die()
-	# Falling on lava
+	# Entering lava
 	elif body.is_in_group("hazards"):
+		in_water = true
+		create_tween().tween_property(animated_sprite, "modulate:a", 0.2, 0.1)
 		_die(body)
 	# Entering water
 	elif body.is_in_group("water"):
@@ -172,34 +185,34 @@ func _on_body_area_body_entered(body: Node2D) -> void:
 func _die(body: Node2D) -> void:
 	if health <= 0: return
 	health = 0
-	if body.is_in_group("player"):
-		if body.invincible:
-			invincibility_knocked_back = true
-		else:
-			squish_audio_player.play()
-			body.bounce_off_enemy()
-	
-	if invincibility_knocked_back:
-		# Disable all collisions while flying away
-		set_collision_layer(0)
-		set_collision_mask(0)
-		# Apply invincibility knockback values
-		velocity.x = randf_range(INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.y)
-		velocity.y = randf_range(INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.y)
-		invincibility_knockback_rotation = randf_range(INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.x, INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.y)
-	elif is_in_group("bossgoomba"):
+
+	if is_in_group("bossgoomba"):
 		jump_timer.stop()
 		spawn_timer.stop()
 		set_collision_layer_value(1, true)
 		set_collision_mask_value(1, true)
-	else:
-		animated_sprite.play("squished")
+	elif body.is_in_group("player"):
+		if body.invincible:
+			invincibility_knocked_back = true
+			# Disable all collisions while flying away
+			set_collision_layer(0)
+			set_collision_mask(0)
+			# Apply invincibility knockback values
+			velocity.x = randf_range(INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_X_SPEED_RANGE.y)
+			velocity.y = randf_range(INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.x, INVINCIBILITY_KNOCKBACK_Y_SPEED_RANGE.y)
+			invincibility_knockback_rotation = randf_range(INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.x, INVINCIBILITY_KNOCKBACK_ROTATION_RANGE.y)
+		else:
+			animated_sprite.play("squished")
+			squish_audio_player.play()
+			body.bounce_off_enemy()
 
 	var disappear_await_time: float
 	if is_in_group("bossgoomba"):
 		disappear_await_time = BOSS_DEATH_SECS
 	elif invincibility_knocked_back:
 		disappear_await_time = INVINCIBILITY_KNOCKBACK_SECS
+	elif body.is_in_group("hazards"):
+		disappear_await_time = HAZARD_DEATH_SECS
 	else:
 		disappear_await_time = SQUISHED_SECS
  

@@ -10,7 +10,7 @@ extends CharacterBody2D
 @onready var invincibility_audio_player = $InvincibilityAudioStreamPlayer
 
 const MAX_SPEED = 300.0
-const ACCELERATION = 1000.0
+const ACCELERATION = 1200.0
 const FRICTION = 1000.0
 const JUMP_VELOCITY = -500.0
 const WATER_JUMP_VELOCITY = -400.0 
@@ -71,21 +71,23 @@ func _physics_process(delta: float) -> void:
 		# Left/Right optionally flips sprite (-1/0/1)
 		var direction := Input.get_axis("ui_left", "ui_right")
 		if direction < 0:
-			animated_sprite.flip_h = !in_water
-			if in_water:animated_sprite.rotation_degrees = -90
+			animated_sprite.flip_h = true
 		elif direction > 0:
-			animated_sprite.flip_h = in_water
-			if in_water: animated_sprite.rotation_degrees = 90
+			animated_sprite.flip_h = false
 		
 		# Set action sprite
 		var animation : String
 		if jumping:
 			animation = "jumping"
-		elif direction != 0:
-			if in_water:
-				animation = "swimming"
+		elif in_water:
+			# sinking or stopped
+			if velocity.y >= 0 && velocity.x == 0:
+				animation = "idle"
+			# swimming
 			else:
-				animation = "running"
+				animation = "swimming"
+		elif direction != 0:
+			animation = "running"
 		else:
 			animation = "idle"
 		if animated_sprite.animation != animation:
@@ -196,4 +198,3 @@ func _apply_water_visual_effect() -> void:
 
 func _remove_water_visual_effect() -> void:
 	create_tween().tween_property(animated_sprite, "modulate:a", 1.0, 0.1)
-	animated_sprite.rotation_degrees = 0
