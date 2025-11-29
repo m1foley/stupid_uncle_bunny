@@ -10,7 +10,7 @@ extends CharacterBody2D
 @onready var invincibility_audio_player = $InvincibilityAudioStreamPlayer
 
 const MAX_SPEED = 300.0
-const ACCELERATION = 1200.0
+const ACCELERATION = 1500.0
 const FRICTION = 1000.0
 const JUMP_VELOCITY = -500.0
 const WATER_JUMP_VELOCITY = -400.0 
